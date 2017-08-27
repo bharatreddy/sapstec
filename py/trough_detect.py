@@ -49,6 +49,8 @@ class TroughBnd(object):
         self.cutOffLatCnt = 20
         self.cutOffMinTECVal = 5.
         self.cutoffUnqMlonCnt = 15.
+        self.cutOffPredEquTECMLAT = 45.
+        self.cutOffPredPolTECMLAT = 70.
         # set variables for trough location filtering
         self.trghLocMlonbinSize = 20
         self.trghLocMlonbinCntCutoff = 0.2
@@ -129,8 +131,10 @@ class TroughBnd(object):
             except:
                 print "failed fit at MLON-->", sMlon
                 continue
-            fwhmEqu = popt[1] - popt[2]*2.355/2.
-            fwhmPol = popt[1] + popt[2]*2.355/2.
+            # get equatorward and poleward boundaries as 
+            # those which are 1 STD away!!!
+            fwhmEqu = popt[1] - popt[2]#*2.355/2.
+            fwhmPol = popt[1] + popt[2]#*2.355/2.
             tecValFwhmEqu = self.gauss_function(fwhmEqu, *popt)
             tecValFwhmPol = self.gauss_function(fwhmPol, *popt)
             # Test goodness of fit
@@ -157,8 +161,10 @@ class TroughBnd(object):
                 continue
             if ksDStat > self.cutoffKSDstat:
                 continue
-            # 5) if tec value at min trough is greater than 4.
-            # discard
+            # 5) If the equatorward and poleward boundaries
+            # are beyond the cutoffs discard
+            # we are not using a min TEC value cutoff, it 
+            # doesn't work well always!
             # GET Trough min loc and tec val
             minTrghLoc = min(list(selMlonDF["Mlat"].values), key=lambda x:abs(x-popt[1]))
             minTrghTecVal = selMlonDF[ selMlonDF["Mlat"] == minTrghLoc ]["med_tec"].values[0]
@@ -168,7 +174,12 @@ class TroughBnd(object):
             # GET Trough pol loc and tec val
             polTrghLoc = min(list(selMlonDF["Mlat"].values), key=lambda x:abs(x-fwhmPol))
             polTrghTecVal = selMlonDF[ selMlonDF["Mlat"] == polTrghLoc ]["med_tec"].values[0]
-            if minTrghTecVal > self.cutOffMinTECVal:
+            # if minTrghTecVal > self.cutOffMinTECVal:
+            #     continue
+            # Check thresholds on equ, pol bnds
+            if equTrghLoc < self.cutOffPredEquTECMLAT:
+                continue
+            if polTrghLoc > self.cutOffPredPolTECMLAT:
                 continue
             # Now we have good fits. Get appropriate boundary locations
             # and TEC values.
