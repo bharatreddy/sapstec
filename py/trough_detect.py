@@ -17,7 +17,7 @@ if __name__ == "__main__":
         "../data/tec-medFilt-20110409.txt" )
     allTimesList = trghObj.get_all_uniq_times()
     # print allTimesList
-    inpDT = datetime.datetime( 2011, 4, 9, 12, 0 )
+    inpDT = datetime.datetime( 2011, 4, 9, 8, 0 )
     trghBndDF = trghObj.find_trough_loc(inpDT)
     print trghBndDF
     fltrdTrghBndDF = trghObj.filter_trough_loc( trghBndDF )
@@ -229,3 +229,68 @@ class TroughBnd(object):
             return trghLocDF
         else:
             return None
+
+    def harmonic_func(self, mlt, a0, c1,\
+                             s1, phiC1, phiS1):
+        """
+        Fit a first order fourier series to 
+        the trough boundaries.
+        """
+        phiC = (2*numpy.pi/24.) * mlt + phiC1
+        phiS = (2*numpy.pi/24.) * mlt + phiS1
+        cosTerm = c1 * numpy.cos(phiC)
+        sinTerm = s1 * numpy.sin(phiS)
+        return a0 + cosTerm + sinTerm
+
+    def fit_boundaries(self, trghLocDF):
+        """
+        Once we identify the presence of a trough
+        we fit first order harmonics to the locations
+        to expand the fitting location.
+        """
+        # Get the coefficients of the fit
+        poptMinTrgh, pcovMinTrgh = curve_fit( trough_fit_harmonic, trghBndDF["mlt"].values,\
+                                   trghBndDF["minTecMlat"].values,\
+                               p0 = [50, 1., 1., 1., 1.] )
+        poptBndEqu, pcovBndEqu = curve_fit( trough_fit_harmonic, trghBndDF["mlt"].values,\
+                                       trghBndDF["BndEquMlat"].values,\
+                                   p0 = [50, 1., 1., 1., 1.] )
+        poptBndPol, pcovBndPol = curve_fit( trough_fit_harmonic, trghBndDF["mlt"].values,\
+                                       trghBndDF["BndPolMlat"].values,\
+                                   p0 = [50, 1., 1., 1., 1.] )
+        # get the coeffs in a DF
+        trghPredTime = [ trghBndDF["BndEquMlat"].values[0] ]
+        a0MinTrgh = [ poptMinTrgh[0] ]
+        a0EquBnd = [ poptBndEqu[0] ]
+        a0PolBnd = [ poptBndPol[0] ]
+        c1MinTrgh = [ poptMinTrgh[1] ]
+        c1EquBnd = [ poptBndEqu[1] ]
+        c1PolBnd = [ poptBndPol[1] ]
+        s1MinTrgh = [ poptMinTrgh[2] ]
+        s1EquBnd = [ poptBndEqu[2] ]
+        s1PolBnd = [ poptBndPol[2] ]
+        phiC1MinTrgh = [ poptMinTrgh[3] ]
+        phiC1EquBnd = [ poptBndEqu[3] ]
+        phiC1PolBnd = [ poptBndPol[3] ]
+        phiS1MinTrgh = [ poptMinTrgh[4] ]
+        phiS1EquBnd = [ poptBndEqu[4] ]
+        phiS1PolBnd = [ poptBndPol[4] ]
+        trghFitParamsDF = pandas.DataFrame({
+                        "trghPredTime" : trghPredTime,
+                        "a0MinTrgh" : a0MinTrgh,
+                        "a0EquBnd" : a0EquBnd,
+                        "a0PolBnd" : a0PolBnd,
+                        "c1MinTrgh" : c1MinTrgh,
+                        "c1EquBnd" : c1EquBnd,
+                        "c1PolBnd" : c1PolBnd,
+                        "s1MinTrgh" : s1MinTrgh,
+                        "s1EquBnd" : s1EquBnd,
+                        "s1PolBnd" : s1PolBnd,
+                        "phiC1MinTrgh" : phiC1MinTrgh,
+                        "phiC1EquBnd" : phiC1EquBnd,
+                        "phiC1PolBnd" : phiC1PolBnd,
+                        "phiS1MinTrgh" : phiS1MinTrgh,
+                        "phiS1EquBnd" : phiS1EquBnd,
+                        "phiS1PolBnd" : phiS1PolBnd
+                        })
+        return trghFitParamsDF
