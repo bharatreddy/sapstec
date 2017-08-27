@@ -17,9 +17,9 @@ if __name__ == "__main__":
         "../data/tec-medFilt-20110409.txt" )
     allTimesList = trghObj.get_all_uniq_times()
     # print allTimesList
-    inpDT = datetime.datetime( 2011, 4, 9, 9, 0 )
+    inpDT = datetime.datetime( 2011, 4, 9, 12, 0 )
     trghBndDF = trghObj.find_trough_loc(inpDT)
-    print "trghBndDF", trghBndDF
+    print trghBndDF
     fltrdTrghBndDF = trghObj.filter_trough_loc( trghBndDF )
     print fltrdTrghBndDF
 
@@ -48,9 +48,11 @@ class TroughBnd(object):
         self.cutOffPrcntErrorFit = 0.2 # 20%
         self.cutOffLatCnt = 20
         self.cutOffMinTECVal = 5.
+        self.cutoffUnqMlonCnt = 15.
         # set variables for trough location filtering
-        self.trghLocMlonbinSize = 10
-        self.trghLocMlonbinCntCutoff = 0.5
+        self.trghLocMlonbinSize = 20
+        self.trghLocMlonbinCntCutoff = 0.2
+        self.cutOffGoodMlonBins = 2
         # choose columns we need to store from the tec file
         tecFileselCols = [ "dateStr", "timeStr", "Mlat",\
               "Mlon", "med_tec", "dlat", "dlon" ]
@@ -179,18 +181,22 @@ class TroughBnd(object):
             BndEquTecValArr.append( equTrghTecVal )
             BndPolTecValArr.append( polTrghTecVal )
             currTimeArr.append( selDT )
-        # Store data in a DF
-        trghBndDF = pandas.DataFrame({
-                    "BndMlon" : BndMlonArr,
-                    "BndEquMlat" : BndEquMlatArr,
-                    "BndPolMlat" : BndPolMlatArr,
-                    "minTecMlat" : minTecMlatArr,
-                    "minTecVal" : minTecValArr,
-                    "BndEquTecVal" : BndEquTecValArr,
-                    "BndPolTecVal" : BndPolTecValArr,
-                    "date" : currTimeArr
-                    })
-        return trghBndDF
+        # Check the number of unique mag lon measurements
+        # we have. IF they are above cutoff, discard them
+        if len( BndMlonArr ) > self.cutoffUnqMlonCnt:
+            # Store data in a DF
+            trghBndDF = pandas.DataFrame({
+                        "BndMlon" : BndMlonArr,
+                        "BndEquMlat" : BndEquMlatArr,
+                        "BndPolMlat" : BndPolMlatArr,
+                        "minTecMlat" : minTecMlatArr,
+                        "minTecVal" : minTecValArr,
+                        "BndEquTecVal" : BndEquTecValArr,
+                        "BndPolTecVal" : BndPolTecValArr,
+                        "date" : currTimeArr
+                        })
+            return trghBndDF
+        return None
 
     def filter_trough_loc(self,trghLocDF):
         """
@@ -204,18 +210,22 @@ class TroughBnd(object):
         # than 50% (actual count=5) values in that bin, we keep
         # those bins and remove the rest.
         # check if longitude goes -180 to 180 or 0 to 360.
-        if numpy.min( trghLocDF["BndMlon"].values ) < 0 :
-            minEdge = -180.
-            maxEdge = 180.
-        else:
-            minEdge = 0.
-            maxEdge = 360.
-        binList = [ b for b in numpy.arange(minEdge,maxEdge,self.trghLocMlonbinSize) ]
-        mlonFreq, mlonBins = numpy.histogram(trghLocDF["BndMlon"].values, bins=binList)
+        minEdge = self.mlonNAList[0]
+        maxEdge = self.mlonNAList[-1]
+        binList = [ b for b in numpy.arange(minEdge,\
+                maxEdge,self.trghLocMlonbinSize) ]
+        # Need to adjust the negative Mlons
+        trghLocDF["adjstMlons"] = [ b - 360. if b > 180. else\
+                 b for b in trghLocDF["BndMlon"] ]
+        mlonFreq, mlonBins = numpy.histogram(trghLocDF["adjstMlons"].values,\
+                             bins=binList)
+        goodMlonValues = numpy.where( mlonFreq >= \
+            self.trghLocMlonbinCntCutoff*self.trghLocMlonbinSize )
+        # if there aren't more than 2 mlon bins with good fits
+        # discard the datapoints.
+        print goodMlonValues, len(goodMlonValues)
         print mlonFreq, mlonBins
-        goodMlonValues = numpy.where( mlonFreq >= self.trghLocMlonbinCntCutoff*self.trghLocMlonbinSize )
-        if goodMlonValues[0].size == 0:
+        if len(goodMlonValues[0]) >= self.cutOffGoodMlonBins:
+            return trghLocDF
+        else:
             return None
-        fltrdTrghLocDF = trghLocDF[ ( trghLocDF["BndMlon"] >= numpy.min( mlonBins[goodMlonValues] ) ) &\
-                          ( trghLocDF["BndMlon"] <= numpy.max( mlonBins[goodMlonValues] ) ) ].reset_index(drop=True)
-        return fltrdTrghLocDF
