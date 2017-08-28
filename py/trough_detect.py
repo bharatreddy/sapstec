@@ -11,6 +11,7 @@ from matplotlib.colors import Normalize
 from matplotlib import ticker
 import seaborn as sns
 import trough_detect
+from aacgmv2 import convert_mlt
 
 if __name__ == "__main__":
     trghObj = trough_detect.TroughBnd( \
@@ -19,9 +20,11 @@ if __name__ == "__main__":
     # print allTimesList
     inpDT = datetime.datetime( 2011, 4, 9, 8, 0 )
     trghBndDF = trghObj.find_trough_loc(inpDT)
-    print trghBndDF
-    fltrdTrghBndDF = trghObj.filter_trough_loc( trghBndDF )
-    print fltrdTrghBndDF
+    if trghBndDF is not None:
+        fltrdTrghBndDF = trghObj.filter_trough_loc( trghBndDF )
+    if fltrdTrghBndDF is not None:
+        bndCoeffsDF = trghObj.fit_boundaries( fltrdTrghBndDF )
+    print bndCoeffsDF
 
 
 class TroughBnd(object):
@@ -104,6 +107,7 @@ class TroughBnd(object):
         identify the location of trough
         """
         BndMlonArr = []
+        BndMltArr = []
         BndEquMlatArr = []
         BndPolMlatArr = []
         minTecMlatArr = []
@@ -185,6 +189,9 @@ class TroughBnd(object):
             # and TEC values.
             # Append the values to arrays
             BndMlonArr.append( sMlon )
+            BndMltArr.append( round( convert_mlt(\
+                                     sMlon,\
+                                    selDT ) ) )
             BndEquMlatArr.append( equTrghLoc )
             BndPolMlatArr.append( polTrghLoc )
             minTecMlatArr.append( minTrghLoc )
@@ -198,6 +205,7 @@ class TroughBnd(object):
             # Store data in a DF
             trghBndDF = pandas.DataFrame({
                         "BndMlon" : BndMlonArr,
+                        "mlt" : BndMltArr,
                         "BndEquMlat" : BndEquMlatArr,
                         "BndPolMlat" : BndPolMlatArr,
                         "minTecMlat" : minTecMlatArr,
@@ -234,8 +242,6 @@ class TroughBnd(object):
             self.trghLocMlonbinCntCutoff*self.trghLocMlonbinSize )
         # if there aren't more than 2 mlon bins with good fits
         # discard the datapoints.
-        print goodMlonValues, len(goodMlonValues)
-        print mlonFreq, mlonBins
         if len(goodMlonValues[0]) >= self.cutOffGoodMlonBins:
             return trghLocDF
         else:
@@ -253,20 +259,20 @@ class TroughBnd(object):
         sinTerm = s1 * numpy.sin(phiS)
         return a0 + cosTerm + sinTerm
 
-    def fit_boundaries(self, trghLocDF):
+    def fit_boundaries(self, trghBndDF):
         """
         Once we identify the presence of a trough
         we fit first order harmonics to the locations
         to expand the fitting location.
         """
         # Get the coefficients of the fit
-        poptMinTrgh, pcovMinTrgh = curve_fit( trough_fit_harmonic, trghBndDF["mlt"].values,\
+        poptMinTrgh, pcovMinTrgh = curve_fit( self.harmonic_func, trghBndDF["mlt"].values,\
                                    trghBndDF["minTecMlat"].values,\
                                p0 = [50, 1., 1., 1., 1.] )
-        poptBndEqu, pcovBndEqu = curve_fit( trough_fit_harmonic, trghBndDF["mlt"].values,\
+        poptBndEqu, pcovBndEqu = curve_fit( self.harmonic_func, trghBndDF["mlt"].values,\
                                        trghBndDF["BndEquMlat"].values,\
                                    p0 = [50, 1., 1., 1., 1.] )
-        poptBndPol, pcovBndPol = curve_fit( trough_fit_harmonic, trghBndDF["mlt"].values,\
+        poptBndPol, pcovBndPol = curve_fit( self.harmonic_func, trghBndDF["mlt"].values,\
                                        trghBndDF["BndPolMlat"].values,\
                                    p0 = [50, 1., 1., 1., 1.] )
         # get the coeffs in a DF
