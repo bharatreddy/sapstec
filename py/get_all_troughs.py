@@ -15,7 +15,8 @@ from aacgmv2 import convert_mlt
 
 if __name__ == "__main__":
     # Base directory where all the files are stored
-    baseDir = "/home/bharat/Documents/code/new-vel-data/veldata/"
+    baseDir = "/home/bharat/Documents/code/data/tec-mf-allday/"
+    outDir = "/home/bharat/Documents/code/data/"
     # read data from a file
     for root, dirs, files in os.walk(baseDir):
         for fNum, fName in enumerate(files):
@@ -23,23 +24,27 @@ if __name__ == "__main__":
             print "working with--->", currInpLosFile, fNum,"/",len(files)
             trghObj = trough_detect.TroughBnd( currInpLosFile )
             allTimesList = trghObj.get_all_uniq_times()
-            fileNameFltrdBnds = baseDir + "/trghBnds/tec-fltrd-vals-" +\
-                                 allTimesList[0].year + "--" +\
-                                 allTimesList[0].month + "--" +\
-                                 allTimesList[0].day + ".txt"
-            fileNameBndCoeffs = baseDir + "/trghCoeffs/bnd-coeffs" +\
-                                 allTimesList[0].year + "--" +\
-                                 allTimesList[0].month + "--" +\
-                                 allTimesList[0].day + ".txt"
+            dtDay = datetime.datetime.utcfromtimestamp(\
+                    allTimesList[0].astype(int) * 1e-9)
+            fileNameFltrdBnds = outDir + "/trghBnds/tec-fltrd-vals-" +\
+                                 str(dtDay.year) + "-" +\
+                                 str(dtDay.month) + "-" +\
+                                 str(dtDay.day) + ".txt"
+            fileNameBndCoeffs = outDir + "/trghCoeffs/bnd-coeffs" +\
+                                 str(dtDay.year) + "-" +\
+                                 str(dtDay.month) + "-" +\
+                                 str(dtDay.day) + ".txt"
             for inpDT in allTimesList:
-                trghBndDF = trghObj.find_trough_loc(inpDT)
+                currDT = datetime.datetime.utcfromtimestamp(\
+                    inpDT.astype(int) * 1e-9)
+                trghBndDF = trghObj.find_trough_loc(currDT)
                 if trghBndDF is not None:
                     fltrdTrghBndDF = trghObj.filter_trough_loc( trghBndDF )
                 if fltrdTrghBndDF is not None:
                     bndCoeffsDF = trghObj.fit_boundaries( fltrdTrghBndDF )
-                with open(fileNameFltrdBnds, 'a') as ftB:
-                    fltrdTrghBndDF.to_csv(ftB, header=False,\
-                                      index=False, sep=' ' )
+                    with open(fileNameFltrdBnds, 'a') as ftB:
+                        fltrdTrghBndDF.to_csv(ftB, header=False,\
+                                          index=False, sep=' ' )
                     with open(fileNameBndCoeffs, 'a') as bcF:
-                    bndCoeffsDF.to_csv(bcF, header=False,\
-                                      index=False, sep=' ' )
+                        bndCoeffsDF.to_csv(bcF, header=False,\
+                                          index=False, sep=' ' )
