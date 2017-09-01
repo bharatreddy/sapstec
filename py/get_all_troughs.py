@@ -38,6 +38,7 @@ if __name__ == "__main__":
                 currDT = datetime.datetime.utcfromtimestamp(\
                     inpDT.astype(int) * 1e-9)
                 trghBndDF = trghObj.find_trough_loc(currDT)
+                fltrdTrghBndDF = None
                 if trghBndDF is not None:
                     fltrdTrghBndDF = trghObj.filter_trough_loc( trghBndDF )
                 if fltrdTrghBndDF is not None:
