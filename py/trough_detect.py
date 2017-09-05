@@ -276,7 +276,7 @@ class TroughBnd(object):
                                        trghBndDF["BndPolMlat"].values,\
                                    p0 = [50, 1., 1., 1., 1.] )
         # get the coeffs in a DF
-        trghPredTime = [ trghBndDF["BndEquMlat"].values[0] ]
+        trghPredTime = [ trghBndDF["date"].values[0] ]
         a0MinTrgh = [ poptMinTrgh[0] ]
         a0EquBnd = [ poptBndEqu[0] ]
         a0PolBnd = [ poptBndPol[0] ]
