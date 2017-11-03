@@ -10,8 +10,8 @@ common amp_data_blk
 
 
 
-dateSel = [20150409, 20150409];
-timeRange = [0700, 0900];
+dateSel = [20150409, 20150409];[20120618, 20120618];[20120121, 20120121];
+timeRange = [0700, 0900];[0100, 0400];[0200, 0500];
 
 
 dt_skip_time=5.d ;;; we search data the grd file every 2 min
@@ -107,7 +107,7 @@ rad_fan_ids = [ 208, 209, 206, 207, 204, 205, 33, 32, 40 ]
 ;; set plot/map parameters
 xrangePlot = [-45,45];[-30, 30]
 yrangePlot = [-45,45];[-40,-10]
-velScale = [-500,500]
+velScale = [-300,300]
 tecScale = [0.,20.]
 ampScale = [ -0.8, 0.8 ]
 cntrMinVal = 0.1
