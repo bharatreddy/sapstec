@@ -107,7 +107,7 @@ rad_fan_ids = [ 208, 209, 206, 207, 204, 205, 33, 32, 40 ]
 ;; set plot/map parameters
 xrangePlot = [-45,45];[-30, 30]
 yrangePlot = [-45,45];[-40,-10]
-velScale = [0,300]
+velScale = [-500,500]
 tecScale = [0.,20.]
 ampScale = [ -0.8, 0.8 ]
 cntrMinVal = 0.1
